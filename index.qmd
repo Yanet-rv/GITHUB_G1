@@ -1,0 +1,101 @@
+---
+title: "EFECTO DEL ÁCIDO GIBERÉLICO EN LA GERMINACIÓN DE SEMILLAS DE TRES GENOTIPOS NATIVOS DE ARÁNDANO DEL GÉNERO Vaccinium."
+author: "Rivera Y_Colunche JJ_Huaman M_ Vasquez E_Maicelo M_Villla J"
+format: html
+---
+
+# 1 librerias
+```{r}
+library(tidyverse)
+library(googlesheets4)
+library(lme4)
+library(emmeans)
+```
+
+# 2 Cargar base de datos
+
+https://docs.google.com/spreadsheets/d/1o4mtAkI1lBgoUzqDT-e7cIhIwh_K5m6CoxAx0ETvwXU/edit?gid=1955940309#gid=1955940309
+
+
+```{r}
+url <- "https://docs.google.com/spreadsheets/d/1o4mtAkI1lBgoUzqDT-e7cIhIwh_K5m6CoxAx0ETvwXU/edit?gid=0#gid=0"
+
+gs <- url %>% 
+  as_sheets_id()
+
+fb <- gs %>% 
+  range_read("fb") %>% 
+  mutate(across(1:block, ~as.factor(.)))
+
+str(fb)
+```
+
+ 3 Modelo estadistico
+
+$$  AG3_{germination} = \mu + block + genotype + AG3 + genotype*AG3 + e  $$
+
+# 4 Análisis de variancia
+
+```{r}
+md <- lmer(formula = germination ~ 0 +(1|block) + genotype*AG3
+           , data = fb)
+anova(md)
+```
+
+```{r}
+library(car)
+Anova(md)
+```
+# 5 Cargar librerías necesarias
+
+```{r}
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(ggplot2)
+library(dplyr)
+
+```
+
+#  6. Comparación de medias con emmeans
+```{r}
+# Cargar librerías necesarias
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(ggplot2)
+library(dplyr)
+
+# Comparación de medias con emmeans
+em <- emmeans(md, ~ genotype * AG3)
+
+# Generar las letras de significancia
+cld_em <- cld(em, Letters = letters, adjust = "tukey")
+
+# Ver resultados con letras
+print(cld_em)
+
+# Limpiar los espacios y preparar los datos para graficar
+cld_em <- cld_em %>%
+  as.data.frame() %>%
+  mutate(
+    genotype = factor(genotype),
+    AG3 = factor(AG3),
+    .group = gsub(" ", "", .group)  # quitar espacios en letras
+  )
+
+# Gráfico de barras con letras
+ggplot(cld_em, aes(x = genotype, y = emmean, fill = AG3)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE),
+                position = position_dodge(width = 0.9), width = 0.2) +
+  geom_text(aes(label = .group),
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 4) +
+  labs(x = "Genotipos", y = "Media estimada de germinación",
+       fill = "AG3",
+       title = "Comparación de medias (genotype × AG3)") +
+  theme_minimal(base_size = 13)
+
+```
+
